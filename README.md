@@ -1,5 +1,7 @@
-Created: 01-30-2021  
-Updated: 01-30-2021
+<link href="style.css" rel="stylesheet"></link> 
+
+<code>Created: 01-30-2021</code>  
+<code>Updated: 01-30-2021</code> 
 
 # RNA Seq Walkthrough
   
@@ -23,7 +25,7 @@ In the examples below I will always be working in a <code>screen</code> window, 
 
 **The Data**: I will be using paired-ended 151 bp Illumina sequence data starting in fastq.gz format.
 
-<br /><br />
+<br />
 
 ## Step 0: Getting the Data
 
@@ -60,7 +62,6 @@ In cases where it seems to make sense I will include the generic command followe
         # This time I find the data files.
         sftp> cd 00_fastq/
         sftp> ls -lh
-
 If you are in the data folder you should see something like:
 
         -rwxr--r--    ? 0        0            2.8G Jan  6 14:04 1M-Ctl-AM_R1_001.fastq.gz
@@ -74,7 +75,7 @@ If you are in the data folder you should see something like:
         -rwxr--r--    ? 0        0            2.1G Jan  6 14:14 2M-CSE-AM_R1_001.fastq.gz
         -rwxr--r--    ? 0        0            2.3G Jan  6 14:14 2M-CSE-AM_R2_001.fastq.gz
 
-3. To copy the files from this server to your workspace use the <code>get</code> command. Here I give some examples
+1. To copy the files from this server to your workspace use the <code>get</code> command. Here I give some examples
 
         # To copy a single file
         sftp> get 1M-Ctl-AM_R1_001.fastq.gz
@@ -92,7 +93,7 @@ If you are in the data folder you should see something like:
         sftp> get LPS*_R1*
 
 **NOTE:** '<code>*</code>' performs wildcard expansion - it can fill in for any characters and is useful for pattern matching. When you use it it's good to check which patterns it's actually matching by double tapping the <code>Tab</code> key. This will list everything that matches. If you see the files you want press <code>Enter</code> to execute.
-<br /><br />
+
 <br /><br />
 
 ### 0.2 From Google Drive
