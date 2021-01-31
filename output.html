@@ -1,0 +1,135 @@
+<p><link href="style.css" rel="stylesheet"></link></p>
+<p><code>Created: 01-30-2021</code><br />
+<code>Updated: 01-31-2021</code></p>
+<h1 id="rna-seq-walkthrough">RNA Seq Walkthrough</h1>
+<h2 id="introduction">Introduction</h2>
+<p><strong>Purpose:</strong> provide a step-by-step, end-to-end RNA Seq analysis walkthrough.</p>
+<p><strong>Environment:</strong> - All commands and scripts are made to run on the UCSC <code>courtyard</code> server, but should work in any bash environment.</p>
+<table>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">OS:</td>
+<td style="text-align: right;">Red Hat 4.8.5-39</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Python3:</td>
+<td style="text-align: right;">3.6.8</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">R:</td>
+<td style="text-align: right;">3.6.0</td>
+</tr>
+</tbody>
+</table>
+<p>If running on Windows try the <a href="https://docs.microsoft.com/en-us/windows/wsl/install-win10">Linux Subsystem for Windows</a> or a Docker instance. Either of these can be used to create Linux environments on Windows (albeit with some drawbacks). I suspect any of the recent Ubuntu releases (16.04, 18.04, 20.04) should work.</p>
+<p>If using <code>courtyard</code> (or any remote server) it’s <strong>highly recommended</strong> that you start commands in a <code>screen</code> environment. This is a very simple step and provides at least two substantial advantages:</p>
+<ol type="1">
+<li>A disruption to your <code>ssh</code> connection will not result in termination of whatever you’re running. (Execution can take many hours to days so this is a likely occurrence)</li>
+<li>You can open multiple windows in the same terminal and switch between them, running different commands in each.</li>
+</ol>
+<p>In the examples below I will always be working in a <code>screen</code> window, however, I will only demonstrate how to start one in section <code>0.1</code>.<br />
+<a href="https://linuxize.com/post/how-to-use-linux-screen/">More on using screens.</a>. If your <code>ssh</code> connection is broken and use the command <code>screen -r</code> to reconnect.</p>
+<p><strong>The Data</strong>: I will be using paired-end 151 bp Illumina sequence data starting in fastq.gz format.</p>
+<p><br /></p>
+<h2 id="step-0-getting-the-data">Step 0: Getting the Data</h2>
+<p>In cases where it seems to make sense I will include the generic command followed by the command I am using for actual data as an example. Otherwise I will just show the command I am using.</p>
+<h3 id="from-an-sftp-server">0.1 From an SFTP Server</h3>
+<ol start="0" type="1">
+<li><p>Connect to courtyard, start a <code>screen</code> and navigate to your directory</p>
+<pre><code> $ ssh &lt;username&gt;@courtyard.gi.ucsc.edu
+ $ ssh emalekos@courtyard.gi.ucsc.edu
+ # enter password at prompt
+
+ $ screen
+ $ cd &lt;directory/to/transfer/data/to&gt;
+ $ cd /public/groups/carpenterlab/people/emalekos/</code></pre></li>
+<li><p>Connecting to data storage on remote server</p>
+<pre><code> $ sftp &lt;username&gt;@&lt;hostname&gt;
+ $ sftp emalekos@sftp.genewiz.com
+ # enter password at prompt</code></pre></li>
+<li><p>We are now in an <code>sftp</code> environment (<code>$</code> -&gt; <code>sftp&gt;</code>). We want to navigate to the data folder, use <code>ls</code> to list available directories</p>
+<pre><code> sftp&gt; ls
+ 30-422456969
+
+ # Now I enter the folder I found above
+ sftp&gt; cd/30-422456969
+ sftp&gt; ls
+ 00_fastq
+
+ # Found another folder, I&#39;ll enter that.
+ # This time I find the data files.
+ sftp&gt; cd 00_fastq/
+ sftp&gt; ls -lh</code></pre>
+<p>If you are in the data folder you should see something like:</p>
+<pre><code> -rwxr--r--    ? 0        0            2.8G Jan  6 14:04 1M-Ctl-AM_R1_001.fastq.gz
+ -rwxr--r--    ? 0        0            3.0G Jan  6 14:04 1M-Ctl-AM_R2_001.fastq.gz
+ -rwxr--r--    ? 0        0            3.0G Jan  6 14:04 1M-LPS-AM_R1_001.fastq.gz
+ -rwxr--r--    ? 0        0            3.1G Jan  6 14:04 1M-LPS-AM_R2_001.fastq.gz
+ -rwxr--r--    ? 0        0            3.0G Jan  6 14:04 1W-Ctl-AM_R1_001.fastq.gz
+ -rwxr--r--    ? 0        0            3.3G Jan  6 14:13 1W-Ctl-AM_R2_001.fastq.gz
+ -rwxr--r--    ? 0        0            3.0G Jan  6 14:13 1W-LPS-AM_R1_001.fastq.gz
+ -rwxr--r--    ? 0        0            3.2G Jan  6 14:13 1W-LPS-AM_R2_001.fastq.gz
+ -rwxr--r--    ? 0        0            2.1G Jan  6 14:14 2M-CSE-AM_R1_001.fastq.gz
+ -rwxr--r--    ? 0        0            2.3G Jan  6 14:14 2M-CSE-AM_R2_001.fastq.gz</code></pre></li>
+<li><p>To copy the files from this server to your workspace use the <code>get</code> command. Here I give some examples</p>
+<pre><code> # To copy a single file
+ sftp&gt; get 1M-Ctl-AM_R1_001.fastq.gz
+
+ # To copy all files
+ sftp&gt; get *
+
+ # To copy all files ending in &#39;fastq.gz&#39;
+ sftp&gt; get *fastq.gz
+
+ # To copy all files with &#39;LPS&#39; somewhere in the middle
+ sftp&gt; get *LPS*
+
+ # To copy all files starting with &#39;LPS&#39; and with &#39;_R1&#39; somewhere before the end
+ sftp&gt; get LPS*_R1*</code></pre></li>
+</ol>
+<p><strong>NOTE:</strong> ’<code>*</code>’ performs wildcard expansion - it can fill in for any characters and is useful for pattern matching. When you use it it’s good to check which patterns it’s actually matching by double tapping the <code>Tab</code> key. This will list everything that matches. If you see the files you want press <code>Enter</code> to execute.</p>
+<p><br /></p>
+<h3 id="from-google-drive">0.2 From Google Drive</h3>
+<p>You can use this method to transfer data files from your Google Drive account to <code>courtyard</code>. It works but is somewhat clunky, and there may be a better way. For instance this method transfers one file at a time, if all relevant files could be zipped together only one command would be required.</p>
+<ol type="1">
+<li><p>We will use the python package <code>gdown</code>. The first time you use this you will have to install it</p>
+<pre><code> pip3 install gdown --user</code></pre></li>
+<li>Get the share link for your Gdrive file
+<ul>
+<li><strong>IMPORTANT</strong> - make sure the the file is accessible to “Anyone with the link”</li>
+<li>The relevant part of the link is the string of characters between <code>/d/</code> and <code>/view/</code></li>
+<li>In the example below this is what we want: <code>1gc0Nfl693O49BECq34g6zno-ThJdBqw_</code></li>
+</ul>
+<p><img src="./Images/0_gdrive.png" /></p></li>
+<li>Run with python3
+<ul>
+<li><p>Now you can start a python3 session and copy the files over</p>
+<pre><code>  $ python3
+
+  # Now in python shell  
+  &gt;&gt;&gt; import gdown
+  &gt;&gt;&gt; url=&quot;https://drive.google.com/uc?id=1gc0Nfl693O49BECq34g6zno-ThJdBqw_&quot;
+  &gt;&gt;&gt; output=&quot;desired_filename.fastq.gz&quot;
+  &gt;&gt;&gt; gdown.download(url, output, quiet=False)</code></pre></li>
+<li><p>Alternatively you can open a text editor and write a script like this one.</p>
+<pre><code>  import gdown
+  url_prefix = &quot;https://drive.google.com/uc?id=&quot;
+  suffix = &quot;.fastq.gz&quot;
+  filedict = {&quot;file_1_1&quot; : &quot;1gc0Nfl693O49BECq34g6zno-ThJdBqw_&quot;,
+              &quot;file_1_2&quot; : &quot;&lt;file 1_2 share link&gt;&quot;,
+              &quot;file_2_1&quot; : &quot;&lt;file 2_1 share link&gt;&quot;,
+              &quot;file_2_2&quot; : &quot;&lt;file 2_2 share link&gt;&quot;}
+
+  for key, value in filedict.items():
+      gdown.download(url_prefix + value, key + suffix, quiet=False)</code></pre>
+<p>After changing the entries in <code>filedict</code> to your desired filenames and corresponding links, run with:</p>
+<pre><code>  python3 file.py</code></pre></li>
+</ul></li>
+</ol>
+<p><br /></p>
+<h3 id="make-smaller-files-for-pipeline-practice-optional">0.3 Make Smaller Files for Pipeline Practice (OPTIONAL)</h3>
+<p>You may want to practice running through the pipeline with a reduced dataset. This would allow you to troubleshoot much more quickly than if you tried processing all of your data at once. We can make some reduced, but still functional <code>fastq.gz</code> files with the following command</p>
+<pre><code>    zcat &lt;file.in&gt; | head -n &lt;# of lines&gt; | gzip &gt; &lt;file.out&gt;
+
+    zcat full_file.fastq.gz | head -n 10000000 | gzip &gt; reqduced_file.gz</code></pre>
+<p>This example takes the first <code>10000000</code> lines of the input file (or the first <code>2500000</code> fastq entries). The resulting gzipped file is ~200 MB. Adjust <code>&lt;# of lines&gt;</code> as you see fit, but make it divisible by 4 to avoid cutting off fastq entries.</p>

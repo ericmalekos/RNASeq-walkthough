@@ -1,4 +1,52 @@
 body{
-    background-color: black;
-	color: darkgrey;
+	background-color: #333;
+	color: white;
+	font-family: 'Trebuchet MS', sans-serif;
+	font-size: 1.1em;
+	line-height: 1.7;
+	font-weight: 500;
+	margin-left: 20%;
+	margin-right: 25%;
+	margin-top: 5%;
+	margin-bottom: 5%;
+
+}
+
+a{
+  	color: #33B8FF;
+	font-weight: bold;
+}
+
+code {
+	color: #90C378;
+    font-size: 1.2em;
+	line-height: 1.5;
+	font-weight: 600;
+}
+
+
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-weight: 600;
+	color: lightblue;
+}
+
+div{
+	background-color: black;
+	/*overflow: hidden;*/
+}
+
+table{
+	font-style: monospace;
+	font-color: yellow;
+}
+
+th, td, tr {
+  border-bottom: 1px solid #ddd;
+  font-style: monospace;
 }
