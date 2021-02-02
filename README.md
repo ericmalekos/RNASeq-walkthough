@@ -3,6 +3,7 @@
 <code>Created: 01-30-2021</code>  
 <code>Updated: 01-31-2021</code>
 
+hosted @ https://github.com/ericmalekos/RNASeq-walkthough
 # RNA Seq Walkthrough
 
 ## Introduction
@@ -13,7 +14,7 @@
 
 |         |                  |
 |:---|---:|
-|OS:      | Red Hat 4.8.5-39 |  
+|OS:      | CentOS 7 |  
 |Python: | 3.6.8  |
 |R:       | 3.6.0  |
 
@@ -25,7 +26,8 @@ If using <code>courtyard</code> (or any remote server) it's **highly recommended
   2. You can open multiple windows in the same terminal and switch between them, running different commands in each.  
 
 In the examples below I will always be working in a <code>screen</code> window, however, I will only demonstrate how to start one in section <code>0.1</code>.  
-[More on using screens.](https://linuxize.com/post/how-to-use-linux-screen/). If your <code>ssh</code> connection is broken and use the command <code>screen -r</code> to reconnect.
+[More on using screen.](https://linuxize.com/post/how-to-use-linux-screen/).  
+If your <code>ssh</code> connection is broken use the command <code>screen -r</code> to reconnect.
 
 **The Data**: I will be using paired-end 151 bp Illumina sequence data starting in fastq.gz format.
 
@@ -58,7 +60,7 @@ In cases where it seems to make sense I will include the generic command followe
         30-422456969
 
         # Now I enter the folder I found above
-        sftp> cd/30-422456969
+        sftp> cd 30-422456969/
         sftp> ls
         00_fastq
 
@@ -126,7 +128,7 @@ You can use this method to transfer data files from your Google Drive account to
             >>> output="desired_filename.fastq.gz"
             >>> gdown.download(url, output, quiet=False)
 
-    - Alternatively you can open a text editor and write a script like this one.
+    - Alternatively you can open a text editor and write a script like this one (or copy the script from the gihub page).
 
             import gdown
             url_prefix = "https://drive.google.com/uc?id="
@@ -141,7 +143,7 @@ You can use this method to transfer data files from your Google Drive account to
 
         After changing the entries in <code>filedict</code> to your desired filenames and corresponding links, run with:
 
-            python3 file.py
+            python3 get_Gdrive.py
 
 <br />
 
@@ -150,5 +152,6 @@ You may want to practice running through the pipeline with a reduced dataset. Th
 
         zcat <file.in> | head -n <# of lines> | gzip > <file.out>
 
-        zcat full_file.fastq.gz | head -n 10000000 | gzip > reqduced_file.gz
+        zcat full_file.fastq.gz | head -n 10000000 | gzip > reduced_file.gz
+
 This example takes the first <code>10000000</code> lines of the input file (or the first <code>2500000</code> fastq entries). The resulting gzipped file is ~200 MB. Adjust <code><# of lines></code> as you see fit, but make it divisible by 4 to avoid cutting off fastq entries.
