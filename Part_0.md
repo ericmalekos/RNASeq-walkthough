@@ -1,8 +1,9 @@
 <link href="style.css" rel="stylesheet"></link>
 
 <code>Created: 01-30-2021</code>  
-<code>Updated: 01-31-2021</code>
+<code>Updated: 02-06-2021</code>
 
+hosted @ https://github.com/ericmalekos/RNASeq-walkthough
 # RNA Seq Walkthrough
 
 ## Introduction
@@ -13,9 +14,9 @@
 
 |         |                  |
 |:---|---:|
-|OS:      | Red Hat 4.8.5-39 |  
+|OS:      | CentOS 7 |  
 |Python: | 3.6.8  |
-|R:       | 3.6.0  |
+|Samtools:       | 1.9  |
 
 If running on Windows try the [Linux Subsystem for Windows](https://docs.microsoft.com/en-us/windows/wsl/install-win10) or a Docker instance. Either of these can be used to create Linux environments on Windows (albeit with some drawbacks). I suspect any of the recent Ubuntu releases (16.04, 18.04, 20.04) should work.  
 
@@ -29,11 +30,13 @@ In the examples below I will always be working in a <code>screen</code> window, 
 
 **The Data**: I will be using paired-end 151 bp Illumina sequence data starting in fastq.gz format.
 
+**Note**: <code>fastq.gz</code> files often appear as <code>fq.gz</code>. If this is the case for your data and you're following this guide, you'll have to change the scripts to <code>fq.gz</code> wherever <code>fastq.gz</code> appears.
+
 <br />
 
-## Step 0: Getting the Data
+## Part 0: Getting the Data
 
-In cases where it seems to make sense I will include the generic command followed by the command I am using for actual data as an example. Otherwise I will just show the command I am using.
+In cases where it seems to make sense I will include the generic command followed by the command I am using for actual data as an example. Otherwise I will just show the command I am using. In the case of generic commands less-than, greater-than markers will be used EX: <data/directory>.
 
 ### 0.1 From an SFTP Server
 0. Connect to courtyard, start a <code>screen</code> and navigate to your directory  
@@ -141,14 +144,14 @@ You can use this method to transfer data files from your Google Drive account to
 
         After changing the entries in <code>filedict</code> to your desired filenames and corresponding links, run with:
 
-            python3 file.py
+            $ python3 file.py
 
 <br />
 
 ### 0.3 Make Smaller Files for Pipeline Practice (OPTIONAL)
 You may want to practice running through the pipeline with a reduced dataset. This would allow you to troubleshoot much more quickly than if you tried processing all of your data at once. We can make some reduced, but still functional <code>fastq.gz</code> files with the following command
 
-        zcat <file.in> | head -n <# of lines> | gzip > <file.out>
+        $ zcat <file.in> | head -n <# of lines> | gzip > <file.out>
 
-        zcat full_file.fastq.gz | head -n 10000000 | gzip > reqduced_file.gz
+        $ zcat full_file.fastq.gz | head -n 10000000 | gzip > reqduced_file.gz
 This example takes the first <code>10000000</code> lines of the input file (or the first <code>2500000</code> fastq entries). The resulting gzipped file is ~200 MB. Adjust <code><# of lines></code> as you see fit, but make it divisible by 4 to avoid cutting off fastq entries.
