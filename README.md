@@ -31,6 +31,8 @@ In the examples below I will always be working in a <code>screen</code> window, 
 
 **The Data**: I will be using paired-end 151 bp Illumina sequence data starting in fastq.gz format.
 
+**Note**: <code>fastq.gz</code> files often appear as <code>fq.gz</code>. If this is the case for your data and you're following this guide, you'll have to change the scripts to <code>fq.gz</code> wherever <code>fastq.gz</code> appears.
+
 <br />
 
 ## Part 0: Getting the Data
@@ -175,7 +177,7 @@ FastQC seems to be the standard read quality checking tool. For each read file i
         $ wget https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.11.9.zip
         $ unzip fastqc_v0.11.9.zip
         $ chmod +x FastQC/*
-        $ rm *.zip
+        $ rm fastqc_v0.11.9.zip
 
         # Make an output directory and run FastQC on all fastq.gz files
 
@@ -199,7 +201,6 @@ Here's an alternative that does not require downloading the files, but instead t
         $ sshfs emalekos@courtyard.gi.ucsc.edu:/public/groups/shariatilab/emalekos/quality_raw_reads/ ./mount
 
         # open a mounted file in your browser
-
         <browser> <mount/file.html>
         $ google-chrome mount/A01_1_fastqc.html
 
@@ -218,7 +219,7 @@ After viewing, unmount the files:
 
 ### 1.3 Trimming and Adapter Removal
 
-Trimming low quality bases in Illumina reads is a common step in sequence alignment pipelines. However, modern aligners including STAR, BWA-MEM and HISAT2 (which we will use in the next section) perform "soft clipping" which eliminates the need for additional trimming.  Using trimming tools in a way that is insensitive will likely reduce the mapping rate and can distort conclusions.  
+Trimming low quality bases in Illumina reads is a common step in sequence alignment pipelines. However, modern aligners including STAR, BWA-MEM and HISAT2 (which we will use in the next section) perform "soft clipping" which eliminates the need for additional trimming.  Using trimming tools in a way that is insensitive will likely reduce the mapping rate and can distort results.  
 What about adapter removal? The author of STAR suggests it could be useful when [aligning short reads](https://github.com/alexdobin/STAR/issues/455) and the author of BWA suggests it [should be done](https://sourceforge.net/p/bio-bwa/mailman/bio-bwa-help/thread/530E1378.3040008%40cam.ac.uk/)
 
 Good tools for adapter trimming are Trimmomatic, Cutadapt and NGmerge. Here I use NGmerge which determines the adapter sequences without user input which is nice. However, unlike the other two, it only works for paired-end reads. 
@@ -265,10 +266,10 @@ To run <code>NGmerge</code> on all of the <code>fastq.gz</code> files in <code>r
 
 
 
-Regarding the variable values above the <code>for</code> statement 
+Regarding the variable above the <code>for</code> statement 
 - If you have different directory names for reads and output you will need to change them. 
 - <code>minRead</code> is based on the FastQC adapter output which shows the adapters ending around base 31. Update this based on your FastQC results.
-- <code>maxQ</code> is set to 41 because in Illumina >=1.8 the top quality sccore is 41 rather than 40.
+- <code>maxQ</code> is set to 41 because in Illumina >=1.8 the top quality score is 41 rather than 40.
 - <code>threads</code> should be chosen with regard to the other jobs running on the server. See below for neighborly thread # setting
  
  Once you've adjusted the variables, run the script:
@@ -284,7 +285,7 @@ This took a few hours when I ran it with the above settings on 10 sets of paired
 
 ### 1.4 On Setting Threads
 
-In the previous step, and going forward, we are going to be making use of a <code>threads</code> option in pretty much every tool we run. <code>Threads</code> is short for "threads of execution" which is computer jargon for a programm performing some sort of data processing. In general a program uses a single thread of execution, but most bioinformatics tools allow the user to specify the number of threads, which is useful because the larger the number of threads, the more data can be processed in parallel, and the faster the operation can complete. However every computer has only a finite number of <code>threads</code>, probably between 4 and 16 on your personal computer, and 64 on <code>courtyard</code>. 64 is a lot, but they are shared among all <code>courtyard</code> users so the number available to you will certainly be less than that. To check the current availability use:
+In the previous step, and going forward, we are going to be making use of a <code>threads</code> option in pretty much every tool we run. <code>threads</code> is short for "threads of execution" which is computer jargon for a program performing some sort of data processing. In general a program uses a single thread of execution, but most bioinformatics tools allow the user to specify the number of threads, which is useful because the larger the number of threads, the more data can be processed in parallel, and the faster the operation can complete. However every computer has only a finite number of <code>threads</code>, probably between 4 and 16 on your personal computer, and 64 on <code>courtyard</code>. 64 is a lot, but they are shared among all <code>courtyard</code> users so the number available to you will certainly be less than that. To check the current availability use:
 
         $ top
 
@@ -293,7 +294,7 @@ You'll see something like:
 ![](./Images/1_top.png)
 
 I've cropped the image so that it only shows one running process - my <code>BWA</code> run - but you'll see all of the current processes.
-The most important thing to note for the thread discussion is the <code>%Cpu(s)</code> number. Here it's at <code>25.5%</code> which means ~ 64 * 0.25 = 16 threads are in use, and 48 are available (also, under my <code>BWA</code> the <code>%CPU</code> is 1197%, where 100% is equivalent to a single thread, so I must have run this with 12 threads).  The main thing is to be considerate when choosing threads and **NOT** contribute to a situation where <code>%Cpu(s)</code> becomes >= <code>100%</code>. This would add significant overhead as the server switches among processes and slow everyone's computation down.
+The most important thing to note for the thread discussion is the <code>%Cpu(s)</code> number. Here it's at <code>25.5%</code> which means ~ 64 * 0.25 = 16 threads are in use, and 48 are available (also, under my <code>BWA</code> the <code>%CPU</code> is <code>1197%</code>, where 100% is equivalent to a single thread, so I must have run this with 12 threads).  The main thing is to be considerate when choosing threads and **NOT** contribute to a situation where <code>%Cpu(s)</code> becomes >= <code>100%</code>. This would add significant overhead as the server switches among processes and slow everyone's computation down.
 
 
 ### 1.5 QC Again
