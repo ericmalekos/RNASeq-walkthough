@@ -166,7 +166,7 @@ Before going any further I'm going to organize my workspace.
 
         # move reads to a new directory
         $ mkdir raw_reads
-        $ mv *.gz 
+        $ mv *.gz
 
 ### 1.1 Read Quality with FastQC
 
@@ -210,7 +210,8 @@ Here are my reads' quality scores for the first <code>fastq.gz</code> file.
 
 And here is the adapter content
 
-![](./Images/1_adapter_raw_example.png)
+<img src="./Images/1_adapter_raw_example.png" width="900" height="600" />
+
 
 After viewing, unmount the files:
 
@@ -222,7 +223,7 @@ After viewing, unmount the files:
 Trimming low quality bases in Illumina reads is a common step in sequence alignment pipelines. However, modern aligners including STAR, BWA-MEM and HISAT2 (which we will use in the next section) perform "soft clipping" which eliminates the need for additional trimming.  Using trimming tools in a way that is insensitive will likely reduce the mapping rate and can distort results.  
 What about adapter removal? The author of STAR suggests it could be useful when [aligning short reads](https://github.com/alexdobin/STAR/issues/455) and the author of BWA suggests it [should be done](https://sourceforge.net/p/bio-bwa/mailman/bio-bwa-help/thread/530E1378.3040008%40cam.ac.uk/)
 
-Good tools for adapter trimming are Trimmomatic, Cutadapt and NGmerge. Here I use NGmerge which determines the adapter sequences without user input which is nice. However, unlike the other two, it only works for paired-end reads. 
+Good tools for adapter trimming are Trimmomatic, Cutadapt and NGmerge. Here I use NGmerge which determines the adapter sequences without user input which is nice. However, unlike the other two, it only works for paired-end reads.
 
         # get NGmerge
         $ git clone https://github.com/jsh58/NGmerge
@@ -238,7 +239,7 @@ To run <code>NGmerge</code> on all of the <code>fastq.gz</code> files in <code>r
         # Make file in nano text editor
         $ nano ngmerge_adapters.sh
 
-        # Copy what's below with Ctrl+C and paste into nano file with Ctrl+Shift+v
+        # Copy what's below with Ctrl+c and paste into nano file with Ctrl+Shift+v
 
         #!/usr/bin/env bash
         readDir=raw_reads/
@@ -266,35 +267,39 @@ To run <code>NGmerge</code> on all of the <code>fastq.gz</code> files in <code>r
 
 
 
-Regarding the variable above the <code>for</code> statement 
-- If you have different directory names for reads and output you will need to change them. 
-- <code>minRead</code> is based on the FastQC adapter output which shows the adapters ending around base 31. Update this based on your FastQC results.
-- <code>maxQ</code> is set to 41 because in Illumina >=1.8 the top quality score is 41 rather than 40.
-- <code>threads</code> should be chosen with regard to the other jobs running on the server. See below for neighborly thread # setting
- 
+Regarding the variables above the <code>for</code> statement   
+        - If you have different directory names for reads and output you will need to change them.  
+        - <code>minRead</code> is based on the FastQC adapter output which shows the adapters ending around base 31. Update this based on your FastQC results.  
+        - <code>maxQ</code> is set to 41 because in Illumina >=1.8 the top quality score is 41 rather than 40.  
+        - <code>threads</code> should be chosen with regard to the other jobs running on the server. See below for neighborly thread # setting  
+
  Once you've adjusted the variables, run the script:
 
         # Ctrl+o then Enter to save
         # Ctrl+x to exit nano
 
+        # make script executable
         $ chmod +x ngmerge_adapters.sh
 
-        $ ./ngmerge_adapters.sh 
+        # run script
+        $ ./ngmerge_adapters.sh
 
 This took a few hours when I ran it with the above settings on 10 sets of paired-end reads.
 
 ### 1.4 On Setting Threads
 
-In the previous step, and going forward, we are going to be making use of a <code>threads</code> option in pretty much every tool we run. <code>threads</code> is short for "threads of execution" which is computer jargon for a program performing some sort of data processing. In general a program uses a single thread of execution, but most bioinformatics tools allow the user to specify the number of threads, which is useful because the larger the number of threads, the more data can be processed in parallel, and the faster the operation can complete. However every computer has only a finite number of <code>threads</code>, probably between 4 and 16 on your personal computer, and 64 on <code>courtyard</code>. 64 is a lot, but they are shared among all <code>courtyard</code> users so the number available to you will certainly be less than that. To check the current availability use:
+In the previous step, and going forward, we are going to be making use of a <code>threads</code> option in pretty much every tool we run. <code>threads</code> is short for "threads of execution" which, in this context, refers to a program performing some sort of data processing. In general a program uses a single thread of execution, but most bioinformatics tools allow the user to specify the number of threads, which is useful because the larger the number of threads, the more data can be processed in parallel, and the faster the operation can complete. However every computer has only a finite number of <code>threads</code>, probably between 4 and 16 on your personal computer, and 64 on <code>courtyard</code>. The 64 threads are shared among all <code>courtyard</code> users so the number available to you will certainly be less than that. To check the current availability use:
 
         $ top
+
+        # use Ctrl + c exit top
 
 You'll see something like:
 
 ![](./Images/1_top.png)
 
 I've cropped the image so that it only shows one running process - my <code>BWA</code> run - but you'll see all of the current processes.
-The most important thing to note for the thread discussion is the <code>%Cpu(s)</code> number. Here it's at <code>25.5%</code> which means ~ 64 * 0.25 = 16 threads are in use, and 48 are available (also, under my <code>BWA</code> the <code>%CPU</code> is <code>1197%</code>, where 100% is equivalent to a single thread, so I must have run this with 12 threads).  The main thing is to be considerate when choosing threads and **NOT** contribute to a situation where <code>%Cpu(s)</code> becomes >= <code>100%</code>. This would add significant overhead as the server switches among processes and slow everyone's computation down.
+The most important thing to note for the thread discussion is the <code>%Cpu(s)</code> number. Here it's at <code>25.5%</code> which means ~ 64 * 0.25 = 16 threads are in use, and 48 are available (also, under my <code>BWA</code> instance the <code>%CPU</code> is <code>1197%</code>, where 100% is equivalent to a single thread, so I must have run this with 12 threads).  The main thing is to be considerate when choosing threads and **NOT** contribute to a situation where <code>%Cpu(s)</code> becomes >= <code>100%</code>. This would add significant overhead as the server switches among processes and slow everyone's computation down.
 
 
 ### 1.5 QC Again
@@ -308,6 +313,9 @@ Here we repeat Parts 1.1 & 1.2, updating the path to point to the new QC files.
 
         $ google-chrome mount/A01_trim_1_fastqc.html
 
-![](./Images/1_adapters_removed.png)
+<img src="./Images/1_adapters_removed.png" width="900" height="600" />
 
         $ fusermount -u mount
+
+
+### Part 2: Mapping and Counting
