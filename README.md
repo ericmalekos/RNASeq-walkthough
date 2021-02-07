@@ -166,11 +166,11 @@ Before going any further I'm going to organize my workspace.
 
         # move reads to a new directory
         $ mkdir raw_reads
-        $ mv *.gz
+        $ mv *.gz raw_reads
 
 ### 1.1 Read Quality with FastQC
 
-FastQC seems to be the standard read quality checking tool. For each read file it generates an HTML file analyses. [More on FastQC.](https://linuxize.com/post/how-to-use-linux-screen/)
+FastQC seems to be the standard read quality checking tool. For each read file it generates an HTML file containing its findings. [More on FastQC.](https://linuxize.com/post/how-to-use-linux-screen/)
 
         # Download and unpack FastQC
 
@@ -182,7 +182,7 @@ FastQC seems to be the standard read quality checking tool. For each read file i
         # Make an output directory and run FastQC on all fastq.gz files
 
         $ mkdir quality_raw_reads
-        for i in raw_reads/*fastq.gz; do FastQC/fastqc $i -t 4 -o quality_raw_reads/ ; done
+        $ for i in raw_reads/*fastq.gz; do FastQC/fastqc $i -o quality_raw_reads/ ; done
 
 ### 1.2 Viewing the Quality HTML
 
