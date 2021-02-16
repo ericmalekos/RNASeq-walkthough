@@ -139,9 +139,9 @@
 <p>Before going any further I’m going to organize my workspace.</p>
 <pre><code>    # move reads to a new directory
     $ mkdir raw_reads
-    $ mv *.gz</code></pre>
+    $ mv *.gz raw_reads</code></pre>
 <h3 id="read-quality-with-fastqc">1.1 Read Quality with FastQC</h3>
-<p>FastQC seems to be the standard read quality checking tool. For each read file it generates an HTML file analyses. <a href="https://linuxize.com/post/how-to-use-linux-screen/">More on FastQC.</a></p>
+<p>FastQC seems to be the standard read quality checking tool. For each read file it generates an HTML file containing its findings. <a href="https://linuxize.com/post/how-to-use-linux-screen/">More on FastQC.</a></p>
 <pre><code>    # Download and unpack FastQC
 
     $ wget https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.11.9.zip
@@ -152,7 +152,7 @@
     # Make an output directory and run FastQC on all fastq.gz files
 
     $ mkdir quality_raw_reads
-    for i in raw_reads/*fastq.gz; do FastQC/fastqc $i -t 4 -o quality_raw_reads/ ; done</code></pre>
+    $ for i in raw_reads/*fastq.gz; do FastQC/fastqc $i -o quality_raw_reads/ ; done</code></pre>
 <h3 id="viewing-the-quality-html">1.2 Viewing the Quality HTML</h3>
 <p>Now we want to view the HTML pages in a web browser. I don’t know of an easy way to do this with the files on the server. One option is to use <code>sftp get</code> as described above to move the files to your computer.</p>
 <p>Here’s an alternative that does not require downloading the files, but instead temporarily mounts the <code>quality_raw_reads</code> to your computer using <code>sshfs</code>. These commands are all run on your local computer, not <code>courtyard</code></p>

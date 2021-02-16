@@ -1,7 +1,7 @@
 <p><link href="style.css" rel="stylesheet"></link></p>
 <p><code>Created: 01-30-2021</code><br />
-<code>Updated: 01-31-2021</code></p>
-<h1 id="rna-seq-walkthrough">RNA Seq Walkthrough</h1>
+<code>Updated: 02-06-2021</code></p>
+<p>hosted @ https://github.com/ericmalekos/RNASeq-walkthough # RNA Seq Walkthrough</p>
 <h2 id="introduction">Introduction</h2>
 <p><strong>Purpose:</strong> provide a step-by-step, end-to-end RNA Seq analysis walkthrough.</p>
 <p><strong>Environment:</strong> - All commands and scripts are made to run on the UCSC <code>courtyard</code> server, but should work in any bash environment.</p>
@@ -9,15 +9,15 @@
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">OS:</td>
-<td style="text-align: right;">Red Hat 4.8.5-39</td>
+<td style="text-align: right;">CentOS 7</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Python3:</td>
+<td style="text-align: left;">Python:</td>
 <td style="text-align: right;">3.6.8</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">R:</td>
-<td style="text-align: right;">3.6.0</td>
+<td style="text-align: left;">Samtools:</td>
+<td style="text-align: right;">1.9</td>
 </tr>
 </tbody>
 </table>
@@ -27,12 +27,13 @@
 <li>A disruption to your <code>ssh</code> connection will not result in termination of whatever you’re running. (Execution can take many hours to days so this is a likely occurrence)</li>
 <li>You can open multiple windows in the same terminal and switch between them, running different commands in each.</li>
 </ol>
-<p>In the examples below I will always be working in a <code>screen</code> window, however, I will only demonstrate how to start one in section <code>0.1</code>.<br />
-<a href="https://linuxize.com/post/how-to-use-linux-screen/">More on using screens.</a>. If your <code>ssh</code> connection is broken and use the command <code>screen -r</code> to reconnect.</p>
+<p>In the examples below I will always be working in a <code>screen</code> window, however, I will only demonstrate how to start one in section <code>0.1</code>. If your <code>ssh</code> connection is broken use the command <code>screen -r</code> to reconnect.<br />
+<a href="https://linuxize.com/post/how-to-use-linux-screen/">More on using screen.</a></p>
 <p><strong>The Data</strong>: I will be using paired-end 151 bp Illumina sequence data starting in fastq.gz format.</p>
+<p><strong>Note</strong>: <code>fastq.gz</code> files often appear as <code>fq.gz</code>. If this is the case for your data and you’re following this guide, you’ll have to change the scripts to <code>fq.gz</code> wherever <code>fastq.gz</code> appears.</p>
 <p><br /></p>
-<h2 id="step-0-getting-the-data">Step 0: Getting the Data</h2>
-<p>In cases where it seems to make sense I will include the generic command followed by the command I am using for actual data as an example. Otherwise I will just show the command I am using.</p>
+<h2 id="part-0-getting-the-data">Part 0: Getting the Data</h2>
+<p>In cases where it seems to make sense I will include the generic command followed by the command I am using for actual data as an example. Otherwise I will just show the command I am using. In the case of generic commands less-than, greater-than markers will be used EX: <data/directory>.</p>
 <h3 id="from-an-sftp-server">0.1 From an SFTP Server</h3>
 <ol start="0" type="1">
 <li><p>Connect to courtyard, start a <code>screen</code> and navigate to your directory</p>
@@ -52,7 +53,7 @@
  30-422456969
 
  # Now I enter the folder I found above
- sftp&gt; cd/30-422456969
+ sftp&gt; cd 30-422456969/
  sftp&gt; ls
  00_fastq
 
@@ -111,7 +112,7 @@
   &gt;&gt;&gt; url=&quot;https://drive.google.com/uc?id=1gc0Nfl693O49BECq34g6zno-ThJdBqw_&quot;
   &gt;&gt;&gt; output=&quot;desired_filename.fastq.gz&quot;
   &gt;&gt;&gt; gdown.download(url, output, quiet=False)</code></pre></li>
-<li><p>Alternatively you can open a text editor and write a script like this one.</p>
+<li><p>Alternatively you can open a text editor and write a script like this one (or copy the script from the gihub page).</p>
 <pre><code>  import gdown
   url_prefix = &quot;https://drive.google.com/uc?id=&quot;
   suffix = &quot;.fastq.gz&quot;
@@ -123,7 +124,7 @@
   for key, value in filedict.items():
       gdown.download(url_prefix + value, key + suffix, quiet=False)</code></pre>
 <p>After changing the entries in <code>filedict</code> to your desired filenames and corresponding links, run with:</p>
-<pre><code>  python3 file.py</code></pre></li>
+<pre><code>  python3 get_Gdrive.py</code></pre></li>
 </ul></li>
 </ol>
 <p><br /></p>
@@ -131,5 +132,122 @@
 <p>You may want to practice running through the pipeline with a reduced dataset. This would allow you to troubleshoot much more quickly than if you tried processing all of your data at once. We can make some reduced, but still functional <code>fastq.gz</code> files with the following command</p>
 <pre><code>    zcat &lt;file.in&gt; | head -n &lt;# of lines&gt; | gzip &gt; &lt;file.out&gt;
 
-    zcat full_file.fastq.gz | head -n 10000000 | gzip &gt; reqduced_file.gz</code></pre>
+    zcat full_file.fastq.gz | head -n 10000000 | gzip &gt; reduced_file.gz</code></pre>
 <p>This example takes the first <code>10000000</code> lines of the input file (or the first <code>2500000</code> fastq entries). The resulting gzipped file is ~200 MB. Adjust <code>&lt;# of lines&gt;</code> as you see fit, but make it divisible by 4 to avoid cutting off fastq entries.</p>
+<p><br /></p>
+<h2 id="part-1-quality-control">Part 1: Quality Control</h2>
+<p>Before going any further I’m going to organize my workspace.</p>
+<pre><code>    # move reads to a new directory
+    $ mkdir raw_reads
+    $ mv *.gz raw_reads</code></pre>
+<h3 id="read-quality-with-fastqc">1.1 Read Quality with FastQC</h3>
+<p>FastQC seems to be the standard read quality checking tool. For each read file it generates an HTML file containing its findings. <a href="https://linuxize.com/post/how-to-use-linux-screen/">More on FastQC.</a></p>
+<pre><code>    # Download and unpack FastQC
+
+    $ wget https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.11.9.zip
+    $ unzip fastqc_v0.11.9.zip
+    $ chmod +x FastQC/*
+    $ rm fastqc_v0.11.9.zip
+
+    # Make an output directory and run FastQC on all fastq.gz files
+
+    $ mkdir quality_raw_reads
+    $ for i in raw_reads/*fastq.gz; do FastQC/fastqc $i -o quality_raw_reads/ ; done</code></pre>
+<h3 id="viewing-the-quality-html">1.2 Viewing the Quality HTML</h3>
+<p>Now we want to view the HTML pages in a web browser. I don’t know of an easy way to do this with the files on the server. One option is to use <code>sftp get</code> as described above to move the files to your computer.</p>
+<p>Here’s an alternative that does not require downloading the files, but instead temporarily mounts the <code>quality_raw_reads</code> to your computer using <code>sshfs</code>. These commands are all run on your local computer, not <code>courtyard</code></p>
+<pre><code>    # Install sshfs on *your* computer if you don&#39;t have it
+    $ sudo apt install sshfs
+    # enter password
+
+    # make local mount directory and mount files to it
+    $ mkdir mount
+
+    $ sshfs &lt;username&gt;@courtyard.gi.ucsc.edu:&lt;path/to/files&gt; &lt;/mount/to&gt;
+    $ sshfs emalekos@courtyard.gi.ucsc.edu:/public/groups/shariatilab/emalekos/quality_raw_reads/ ./mount
+
+    # open a mounted file in your browser
+    &lt;browser&gt; &lt;mount/file.html&gt;
+    $ google-chrome mount/A01_1_fastqc.html</code></pre>
+<p>Here are my reads’ quality scores for the first <code>fastq.gz</code> file.</p>
+<p><img src="./Images/1_read_raw_example.png" /></p>
+<p>And here is the adapter content</p>
+<p><img src="./Images/1_adapter_raw_example.png" width="900" height="600" /></p>
+<p>After viewing, unmount the files:</p>
+<pre><code>    $ fusermount -u &lt;mounted_dir&gt;
+    $ fusermount -u mount</code></pre>
+<h3 id="trimming-and-adapter-removal">1.3 Trimming and Adapter Removal</h3>
+<p>Trimming low quality bases in Illumina reads is a common step in sequence alignment pipelines. However, modern aligners including STAR, BWA-MEM and HISAT2 (which we will use in the next section) perform “soft clipping” which eliminates the need for additional trimming. Using trimming tools in a way that is insensitive will likely reduce the mapping rate and can distort results.<br />
+What about adapter removal? The author of STAR suggests it could be useful when <a href="https://github.com/alexdobin/STAR/issues/455">aligning short reads</a> and the author of BWA suggests it <a href="https://sourceforge.net/p/bio-bwa/mailman/bio-bwa-help/thread/530E1378.3040008%40cam.ac.uk/">should be done</a></p>
+<p>Good tools for adapter trimming are Trimmomatic, Cutadapt and NGmerge. Here I use NGmerge which determines the adapter sequences without user input which is nice. However, unlike the other two, it only works for paired-end reads.</p>
+<pre><code>    # get NGmerge
+    $ git clone https://github.com/jsh58/NGmerge
+    $ cd NGmerge
+    $ make
+    $ cd ..
+
+    # make new directory for reads with adapters removed
+    $ mkdir adapter_trimmed_reads</code></pre>
+<p>To run <code>NGmerge</code> on all of the <code>fastq.gz</code> files in <code>raw_reads/</code> you can copy this script.</p>
+<pre><code>    # Make file in nano text editor
+    $ nano ngmerge_adapters.sh
+
+    # Copy what&#39;s below with Ctrl+c and paste into nano file with Ctrl+Shift+v
+
+    #!/usr/bin/env bash
+    readDir=raw_reads/
+    minRead=31
+    threads=8
+    maxQ=41
+    outDir=adapter_trimmed_reads/
+    outName=trim
+    for i in ${readDir}*_1.fastq.gz
+    do
+            prefix=$(basename $i _1.fastq.gz)
+            echo $prefix
+
+            ./NGmerge/NGmerge \
+                    -a \
+                    -z \
+                    -v \
+                    -e $minRead \
+                    -u $maxQ \
+                    -n $threads \
+                    -1 ${readDir}${prefix}_1.fq.gz \
+                    -2 ${readDir}${prefix}_2.fq.gz \
+                    -o ${outDir}${prefix}_${outName}
+    done</code></pre>
+<p>Regarding the variables above the <code>for</code> statement<br />
+- If you have different directory names for reads and output you will need to change them.<br />
+- <code>minRead</code> is based on the FastQC adapter output which shows the adapters ending around base 31. Update this based on your FastQC results.<br />
+- <code>maxQ</code> is set to 41 because in Illumina &gt;=1.8 the top quality score is 41 rather than 40.<br />
+- <code>threads</code> should be chosen with regard to the other jobs running on the server. See below for neighborly thread # setting</p>
+<p>Once you’ve adjusted the variables, run the script:</p>
+<pre><code>    # Ctrl+o then Enter to save
+    # Ctrl+x to exit nano
+
+    # make script executable
+    $ chmod +x ngmerge_adapters.sh
+
+    # run script
+    $ ./ngmerge_adapters.sh</code></pre>
+<p>This took a few hours when I ran it with the above settings on 10 sets of paired-end reads.</p>
+<h3 id="on-setting-threads">1.4 On Setting Threads</h3>
+<p>In the previous step, and going forward, we are going to be making use of a <code>threads</code> option in pretty much every tool we run. <code>threads</code> is short for “threads of execution” which, in this context, refers to a program performing some sort of data processing. In general a program uses a single thread of execution, but most bioinformatics tools allow the user to specify the number of threads, which is useful because the larger the number of threads, the more data can be processed in parallel, and the faster the operation can complete. However every computer has only a finite number of <code>threads</code>, probably between 4 and 16 on your personal computer, and 64 on <code>courtyard</code>. The 64 threads are shared among all <code>courtyard</code> users so the number available to you will certainly be less than that. To check the current availability use:</p>
+<pre><code>    $ top
+
+    # use Ctrl + c exit top</code></pre>
+<p>You’ll see something like:</p>
+<p><img src="./Images/1_top.png" /></p>
+<p>I’ve cropped the image so that it only shows one running process - my <code>BWA</code> run - but you’ll see all of the current processes. The most important thing to note for the thread discussion is the <code>%Cpu(s)</code> number. Here it’s at <code>25.5%</code> which means ~ 64 * 0.25 = 16 threads are in use, and 48 are available (also, under my <code>BWA</code> instance the <code>%CPU</code> is <code>1197%</code>, where 100% is equivalent to a single thread, so I must have run this with 12 threads). The main thing is to be considerate when choosing threads and <strong>NOT</strong> contribute to a situation where <code>%Cpu(s)</code> becomes &gt;= <code>100%</code>. This would add significant overhead as the server switches among processes and slow everyone’s computation down.</p>
+<h3 id="qc-again">1.5 QC Again</h3>
+<p>Here we repeat Parts 1.1 &amp; 1.2, updating the path to point to the new QC files.</p>
+<pre><code>    mkdir quality_trimmed
+    for i in adapter_trimmed_reads/*fastq.gz; do FastQC/fastqc $i -o quality_trimmed/ ; done
+
+    $ sshfs emalekos@courtyard.gi.ucsc.edu:/public/groups/shariatilab/emalekos/quality_raw_reads/ ./mount
+
+    $ google-chrome mount/A01_trim_1_fastqc.html</code></pre>
+<p><img src="./Images/1_adapters_removed.png" width="900" height="600" /></p>
+<pre><code>    $ fusermount -u mount</code></pre>
+<h3 id="part-2-mapping-and-counting">Part 2: Mapping and Counting</h3>

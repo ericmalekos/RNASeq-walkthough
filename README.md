@@ -1,9 +1,9 @@
 <link href="style.css" rel="stylesheet"></link>
 
 <code>Created: 01-30-2021</code>  
-<code>Updated: 02-06-2021</code>
+<code>Updated: 02-16-2021</code>
 
-hosted @ https://github.com/ericmalekos/RNASeq-walkthough
+hosted @ https://github.com/ericmalekos/RNASeq-walkthough  
 # RNA Seq Walkthrough
 
 ## Introduction
@@ -184,9 +184,9 @@ FastQC seems to be the standard read quality checking tool. For each read file i
         $ mkdir quality_raw_reads
         $ for i in raw_reads/*fastq.gz; do FastQC/fastqc $i -o quality_raw_reads/ ; done
 
-### 1.2 Viewing the Quality HTML
+### 1.2 Viewing the FastQC Results
 
-Now we want to view the HTML pages in a web browser. I don't know of an easy way to do this with the files on the server. One option is to use <code>sftp get</code> as described above to move the files to your computer.
+Now we want to view the HTML pages in a web browser. I don't know of an easy way to do this while the files are on the server. One option is to use <code>sftp get</code> as described above to move the files to your computer.
 
 Here's an alternative that does not require downloading the files, but instead temporarily mounts the <code>quality_raw_reads</code> to your computer using <code>sshfs</code>. These commands are all run on your local computer, not <code>courtyard</code>
 
@@ -199,6 +199,7 @@ Here's an alternative that does not require downloading the files, but instead t
 
         $ sshfs <username>@courtyard.gi.ucsc.edu:<path/to/files> </mount/to>
         $ sshfs emalekos@courtyard.gi.ucsc.edu:/public/groups/shariatilab/emalekos/quality_raw_reads/ ./mount
+        # Enter courtyard password
 
         # open a mounted file in your browser
         <browser> <mount/file.html>
@@ -221,7 +222,7 @@ After viewing, unmount the files:
 ### 1.3 Trimming and Adapter Removal
 
 Trimming low quality bases in Illumina reads is a common step in sequence alignment pipelines. However, modern aligners including STAR, BWA-MEM and HISAT2 (which we will use in the next section) perform "soft clipping" which eliminates the need for additional trimming.  Using trimming tools in a way that is insensitive will likely reduce the mapping rate and can distort results.  
-What about adapter removal? The author of STAR suggests it could be useful when [aligning short reads](https://github.com/alexdobin/STAR/issues/455) and the author of BWA suggests it [should be done](https://sourceforge.net/p/bio-bwa/mailman/bio-bwa-help/thread/530E1378.3040008%40cam.ac.uk/)
+What about adapter removal? The author of STAR suggests it could be useful when [aligning short reads](https://github.com/alexdobin/STAR/issues/455) and the author of BWA suggests it [should be done](https://sourceforge.net/p/bio-bwa/mailman/bio-bwa-help/thread/530E1378.3040008%40cam.ac.uk/).
 
 Good tools for adapter trimming are Trimmomatic, Cutadapt and NGmerge. Here I use NGmerge which determines the adapter sequences without user input which is nice. However, unlike the other two, it only works for paired-end reads.
 
@@ -239,7 +240,7 @@ To run <code>NGmerge</code> on all of the <code>fastq.gz</code> files in <code>r
         # Make file in nano text editor
         $ nano ngmerge_adapters.sh
 
-        # Copy what's below with Ctrl+c and paste into nano file with Ctrl+Shift+v
+        # Copy what's below with Ctrl + c and paste into nano file with Ctrl + Shift + v
 
         #!/usr/bin/env bash
         readDir=raw_reads/
@@ -288,11 +289,11 @@ This took a few hours when I ran it with the above settings on 10 sets of paired
 
 ### 1.4 On Setting Threads
 
-In the previous step, and going forward, we are going to be making use of a <code>threads</code> option in pretty much every tool we run. <code>threads</code> is short for "threads of execution" which, in this context, refers to a program performing some sort of data processing. In general a program uses a single thread of execution, but most bioinformatics tools allow the user to specify the number of threads, which is useful because the larger the number of threads, the more data can be processed in parallel, and the faster the operation can complete. However every computer has only a finite number of <code>threads</code>, probably between 4 and 16 on your personal computer, and 64 on <code>courtyard</code>. The 64 threads are shared among all <code>courtyard</code> users so the number available to you will certainly be less than that. To check the current availability use:
+In the previous step, and going forward, we are going to be making use of a <code>threads</code> option in pretty much every tool we run. <code>threads</code> is short for "threads of execution" which, in this context, refers to a program performing some sort of data processing. In general a program uses a single thread of execution, but most bioinformatics tools allow the user to specify the number of threads, which is useful because the larger the number of threads, the more data can be processed in parallel, and the faster the operation can complete. However every computer has only a finite number of <code>threads</code>, probably between 4 and 16 on your personal computer, and 64 on <code>courtyard</code>. The <code>64 threads</code> are shared among all <code>courtyard</code> users so the number available to you will certainly be less than that. To check the current availability use:
 
         $ top
 
-        # use Ctrl + c exit top
+        # use Ctrl + c to exit top
 
 You'll see something like:
 
@@ -318,4 +319,183 @@ Here we repeat Parts 1.1 & 1.2, updating the path to point to the new QC files.
         $ fusermount -u mount
 
 
-### Part 2: Mapping and Counting
+## Part 2: Mapping and Counting
+When it comes to counting genes and transcripts there are two approaches:
+1. Align reads to genome + counting
+2. "Pseudo align" reads to transcriptome + quantification
+
+The first (implemented in programs like <code>STAR</code>, <code>cufflinks</code>, and generally anything that produces a BAM/SAM file) has been the standard.
+Pros:  
+   - produces BAM/SAM for downstream analysis  
+   - often have additional features like marking novel splice junctions
+Cons:  
+   - relatively slow and/or memory hungry  
+   - Although fast by aligner standards, <code>STAR</code> requires ~32 GB of RAM when mapping to human genome
+   - pseudo aligners on the other hand are often remarked to be runnable on a laptop 
+   - maybe not as accurate as the pseudo aligners (although, of course, this doesn't seem to be straightforward)
+
+The second (implemented in <code>Salmon</code> and <code>Kallisto</code>) is a newer method that relies on "pseudo-alignment" and seems to be increasingly popular. It compares reads to the transcriptome rather than the genome.
+Pros:
+   - much less computationally demanding
+   - may give better results in terms of both gene and transcript level quantification
+   - Salmon and Kallisto are in remarkable agreement, uncommon for bioinformatics tools
+   - made to deal with multimapping reads from the outset (I know <code>STAR</code> also has parameters that can be set in this regard, not sure about other aligners).
+Cons:
+   - requires an annotated transcriptome
+   - less compatible with many downstream tools - in particular those that require BAM/SAMs
+
+### Part 2.2 STAR Alignment and Counting
+
+<code>STAR</code> is a fast but memory hungry aligner (recommends at least 32 GBs for human genome) with a built in gene counting function yeilding the same results as <code>htseq</code> but saving a step by counting as it maps. It seems to be among the most popular transcript aligning tools. [More on STAR](https://github.com/alexdobin/STAR). Before mapping we need to build a genome index.
+We need:
+1. STAR
+2. Annotation files (GTF or GFF)
+3. Genome 
+
+My data is from mouse, the files can be found [here](https://www.gencodegenes.org/mouse/release_M25.html). Note that the STAR documentation recommends using the <code>primary_assembly</code> (PRI) files. 
+
+        # Make new directory and get STAR
+        mkdir STAR
+        cd STAR
+
+        wget https://github.com/alexdobin/STAR/archive/2.7.7a.zip
+        unzip 2.7.7a.zip
+
+        cd STAR-2.7.7a/source
+        make
+
+        cd ../..
+
+        # Annotation and Genome
+        wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/gencode.vM25.primary_assembly.annotation.gtf.gz
+        
+        wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/GRCm38.primary_assembly.genome.fa.gz
+
+        # Files need to be unzipped
+        gunzip *.gz
+
+Now we can create an index of the genome.
+
+        mkdir M25_index
+
+        STAR-2.7.7a/source/STAR \
+                --runThreadN 8 \
+                --runMode genomeGenerate \
+                --genomeDir ./M25_index \
+                --genomeFastaFiles ./GRCm38.primary_assembly.genome.fa \
+                --sjdbGTFfile ./gencode.vM25.primary_assembly.annotation.gtf \
+                --sjdbOverhang 150 \
+
+The arguments in this step are pretty straightforward. You might change <code>--sjdbOverhang</code> based on your read lengths. The optimum choice is <code>length of longest read - 1</code>
+Now we perform the alignment and gene counting in STAR.  
+**NOTE** The script provided will cycle through all of the pair end reads in the <code>readDir</code>. There is a way
+to load the genome index into memory outside of the alignment which should save significant overhead by avoiding the
+situation where the genome is loaded and unloaded in each iteration. I was having trouble getting this functionality to
+work so it is not shown in this version. 
+
+        # First make some output directories
+        for i in <reads_directory>/*<file_suffix>; do mkdir $(basename $i <file_suffix>) ; done
+        for i in ../adapter_trimmed_reads/*_1.fastq.gz; do mkdir $(basename $i _1.fastq.gz) ; done
+
+        ls
+        # You should now see directories corresponding to each pair of reads
+
+        # I call STAR from a script:
+        nano star_map_sort.sh
+
+        threads=12
+        readDir=../adapter_trimmed_reads/
+        index=./M25_index/
+        outDir=./
+        for read in ${readDir}*_1.fastq.gz
+        for read in ${readDir}*_1.fastq.gz
+        do
+                base="$(basename "$read" _1.fastq.gz)"
+                name1="$base"_1.fastq.gz   
+                name2="$base"_2.fastq.gz
+                echo
+                echo First Read:  $name1
+                echo Second Read: $name2
+
+                outDir="$base"/
+                echo Output Directory: $outDir
+
+                STAR-2.7.7a/source/STAR \
+                --genomeDir $index \
+                --readFilesIn \
+                ${readDir}/${name1} \
+                ${readDir}/${name2} \
+                --readFilesCommand zcat \
+                --outSAMtype BAM SortedByCoordinate \
+                --outSAMattributes NH HI AS nM XS \
+                --twopassMode Basic \
+                --outFilterMultimapNmax 10 \
+                --quantMode GeneCounts \
+                --runThreadN $threads \
+                --alignEndsType Local \
+                --outFileNamePrefix ${outDir}/$"base"
+
+        done
+
+
+        # save and exit: CTRL + o, ENTER, CTRL + x
+
+        chmod +x star_map_sort.sh
+
+        ./star_map_sort.sh
+
+Arguments:
+<code>readFilesCommand</code>: set to <code>zcat</code> if files are in <code>.gz</code> format, otherwise remove this
+<code>outSAMtype</code>: sorted BAM file.  
+<code>outSAMattributes</code>: attributes to include in alignment file. <code>NH HI AS nM</code> are standard.
+              I include <code>XS</code> because I believe it is reequired for <code>juncBASE</code>.  
+<code>twopassMode</code>: default is single pass, <code>Basic</code> indicates to 2-pass mapping. I understand
+              this to be preferred for considering splice junctions.  
+<code>outFilterMultimapNmax</code>: maximum number of loci the read is allowed to map to. 10 is default.
+               reads that map to >10 loci are not included in BAM Alignment file.  
+<code>quantMode</code>: <code>GeneCounts</code> results in output file containing gene counts the same as <code>htseq-count</code> with
+               default settings. All library combinations are accounted for (unstranded, first/second stranded)
+               each as a separate column, so you need to pick the correct column from this output.
+               See <code>STAR</code> manual/<code>htseq</code> manual for more info.  
+<code>runThreadN</code>: number of threads.  
+<code>alignEndsType</code>: alignmnent. Local is default and performs soft clipping.  
+<code>outFileNamePrefix</code>: there will be many output files. It's probably best to send each to its own
+               directory. This assigns the prefix to each.  
+
+### Part 2.3 Salmon Pseudo-Alignment and Quantification
+
+As with <code>STAR</code> we will build an index. 
+We need:
+1. Salmon
+2. An annotated transcriptome
+3. The primary genome assembly
+
+        mkdir Salmon
+        cd Salmon
+
+        wget https://github.com/COMBINE-lab/salmon/releases/download/v1.4.0/salmon-1.4.0_linux_x86_64.tar.gz
+        tar -xvf salmon-1.4.0_linux_x86_64.tar.gz
+
+        rm *.gz
+
+        # rename directory as "salmon"
+        mv salmon-latest_linux_x86_64/ salmon
+
+        #Download transcriptome and genome
+        wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/gencode.vM25.transcripts.fa.gz
+
+        wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/GRCm38.primary_assembly.genome.fa.gz
+
+I copied the following code from https://combine-lab.github.io/alevin-tutorial/2019/selective-alignment/
+
+        # Make a decoy file
+        grep "^>" <(gunzip -c GRCm38.primary_assembly.genome.fa.gz) | cut -d " " -f 1 > decoys.txt
+
+        sed -i.bak -e 's/>//g' decoys.txt
+
+        # Create a new file combining transcriptome and genome, with transcriptome first
+        cat gencode.vM23.transcripts.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome.fa.gz
+
+        salmon/bin/salmon index -t gentrome.fa.gz -d decoys.txt -p 12 -i salmon_index --gencode
+
+Check the dialogue [here](https://github.com/COMBINE-lab/salmon/issues/214) for an explanation of the warning messages. You may want to set the <code>--keepDuplicates</code> flag.
