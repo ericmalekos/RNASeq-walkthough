@@ -35,11 +35,7 @@ threads=12
 readDir=../adapter_trimmed_reads/
 index=./M25_index/
 outDir=./
-for read in ${readDir}*1.fastq.gz
-threads=12
-readDir=../adapter_trimmed_reads/
-index=./M25_index/
-outDir=./
+
 for read in ${readDir}*_1.fastq.gz
 do
         base="$(basename "$read" _1.fastq.gz)"
