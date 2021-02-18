@@ -302,7 +302,7 @@ You'll see something like:
 ![](./Images/1_top.png)
 
 I've cropped the image so that it only shows one running process - my *BWA* run - but you'll see all of the current processes.
-The most important thing to note for the thread discussion is the **%Cpu(s)** number. Here it's at **25.5%** which means *~ 64 * 0.25 = 16* threads are in use, and 48 are available (also, under my *BWA* instance the **%CPU** is **1197%**, where 100% is equivalent to a single thread, so I must have run this with 12 threads).  The main thing is to be considerate when choosing threads and **NOT** contribute to a situation where *%Cpu(s) becomes >= 100%*. This would add significant overhead as the server switches among processes and slow everyone's computation down.
+The most important thing to note for the thread discussion is the **%Cpu(s)** number. Here it's at **25.5%** which means *~ 64 \* 0.25 = 16* threads are in use, and 48 are available (also, under my *BWA* instance the **%CPU** is **1197%**, where 100% is equivalent to a single thread, so I must have run this with 12 threads).  The main thing is to be considerate when choosing threads and **NOT** contribute to a situation where *%Cpu(s) becomes >= 100%*. This would add significant overhead as the server switches among processes and slow everyone's computation down.
 
 
 ### 1.5 QC Again
@@ -348,10 +348,10 @@ The second (implemented in *Salmon* and *Kallisto*) is a newer method that relie
 
 ### Part 2.2 STAR Alignment and Counting
 
-STAR is a fast but memory hungry aligner (recommends at least 32 GBs for human genome) with a built in gene counting function yeilding the same results as *htseq* but saving a step by counting as it maps. It seems to be among the most popular transcript aligning tools. [More on *STAR*](https://github.com/alexdobin/STAR). Before mapping we need to build a genome index.
-We need:
-1. *STAR*
-2. Annotation files (GTF or GFF)
+*STAR* is a fast but memory hungry aligner (recommends at least 32 GBs for human genome) with a built in gene counting function yeilding the same results as *htseq-count* (default settings) but saving a step by counting as it maps. It seems to be among the most popular transcript aligning tools. [More on *STAR*](https://github.com/alexdobin/STAR). Before mapping we need to build a genome index.
+We need:  
+1. *STAR*  
+2. Annotation files (GTF or GFF)  
 3. Genome 
 
 My data is from mouse, the files can be found [here](https://www.gencodegenes.org/mouse/release_M25.html). Note that the STAR documentation recommends using the *primary_assembly* (PRI) files. 
@@ -498,11 +498,11 @@ I copied the following code from [here](https://combine-lab.github.io/alevin-tut
         salmon/bin/salmon index -t gentrome.fa.gz -d decoys.txt -p 12 -i salmon_index --gencode
 
 Arguments:  
-- <code>t</code>: transcriptome and genome concatenated file with which to build index.
-- <code>d</code>: decoy file used to avoid spurious mappings. I don't understand this very well, there's a discussion of why this is important [here](https://www.biostars.org/p/335414/).
-- <code>p</code>: number of threads
-- <code>i</code>: name of the generated index
-- <code>gencode</code>: tell *Salmon* the input is in Gencode format.  
+- <code>t</code>: transcriptome and genome concatenated file with which to build index  
+- <code>d</code>: decoy file used to avoid spurious mappings. I don't understand this very well, there's a discussion of why this is important [here](https://www.biostars.org/p/335414/)  
+- <code>p</code>: number of threads  
+- <code>i</code>: name of the generated index  
+- <code>gencode</code>: tell *Salmon* the input is in Gencode format  
 
 For more options and explanations use <code>salmon/bin/salmon index --help</code>  
 
