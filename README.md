@@ -1,7 +1,7 @@
 <link href="style.css" rel="stylesheet"></link>
 
 <code>Created: 01-30-2021</code>  
-<code>Updated: 02-17-2021</code>
+<code>Updated: 03-13-2021</code>
 
 hosted @ https://github.com/ericmalekos/RNASeq-walkthough  
 
@@ -333,7 +333,7 @@ The first (implemented in programs like *STAR*, *cufflinks* and generally anythi
 **Cons:**  
    - relatively slow and/or memory hungry  
    - Although fast by aligner standards, *STAR* requires ~32 GB of RAM when mapping to human genome
-   - pseudo aligners on the other hand are often remarked to be runnable on a laptop 
+   - pseudo aligners on the other hand are often remarked to be runnable on a laptop
    - maybe not as accurate as the pseudo aligners (although, of course, this doesn't seem to be straightforward)
 
 The second (implemented in *Salmon* and *Kallisto*) is a newer method that relies on "pseudo-alignment" and seems to be increasingly popular. It compares reads to the transcriptome rather than the genome.  
@@ -352,9 +352,9 @@ The second (implemented in *Salmon* and *Kallisto*) is a newer method that relie
 We need:  
 1. *STAR*  
 2. Annotation files (GTF or GFF)  
-3. Genome 
+3. Genome
 
-My data is from mouse, the files can be found [here](https://www.gencodegenes.org/mouse/release_M25.html). Note that the STAR documentation recommends using the *primary_assembly* (PRI) files. 
+My data is from mouse, the files can be found [here](https://www.gencodegenes.org/mouse/release_M25.html). Note that the STAR documentation recommends using the *primary_assembly* (PRI) files.
 
         # Make new directory and get STAR
         mkdir STAR
@@ -370,7 +370,7 @@ My data is from mouse, the files can be found [here](https://www.gencodegenes.or
 
         # Annotation and Genome
         wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/gencode.vM25.primary_assembly.annotation.gtf.gz
-        
+
         wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/GRCm38.primary_assembly.genome.fa.gz
 
         # Files need to be unzipped
@@ -386,7 +386,7 @@ Now we can create an index of the genome.
                 --genomeDir ./M25_index \
                 --genomeFastaFiles ./GRCm38.primary_assembly.genome.fa \
                 --sjdbGTFfile ./gencode.vM25.primary_assembly.annotation.gtf \
-                --sjdbOverhang 150 \
+                --sjdbOverhang 150
 
 The arguments in this step are pretty straightforward. You might change <code>--sjdbOverhang</code> based on your read lengths. The optimum choice is *length of longest read - 1*
 Now we perform the alignment and gene counting in *STAR*.  
@@ -442,7 +442,7 @@ Now we perform the alignment and gene counting in *STAR*.
         ./star_map_sort.sh
 
 The <code>echo</code> statements should give you some indication that you're pointing to the intended files/directories. Use <code>CTRL + c</code> to cancel the run if you're pointing to the wrong locations.
- 
+
 Arguments:  
 - <code>readFilesCommand</code>: set to <code>zcat</code> if files are in <code>.gz</code> format, otherwise remove this.  
 - <code>outSAMtype</code>: sorted BAM file.  
@@ -463,7 +463,7 @@ Arguments:
 
 ### Part 2.3 Salmon Pseudo-Alignment and Quantification
 
-As with *STAR* we will build an index. 
+As with *STAR* we will build an index.
 We need:  
 1. *Salmon*  
 2. An annotated transcriptome  
@@ -551,6 +551,6 @@ Arguments:
   - <code>index</code>: points to the output of "salmon index ..."  
   - <code>mates1/2</code>: points to pair of reads  
   - <code>threads</code>: number of threads  
-  - <code>softclip</code>: allow soft clipping. 
+  - <code>softclip</code>: allow soft clipping.
 
 As with *STAR* there are many other parameters that can be tweaked. Use <code>salmon quant --help-reads</code> to view them.

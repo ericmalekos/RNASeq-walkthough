@@ -1,6 +1,6 @@
 <p><link href="style.css" rel="stylesheet"></link></p>
 <p><code>Created: 01-30-2021</code><br />
-<code>Updated: 02-17-2021</code></p>
+<code>Updated: 03-13-2021</code></p>
 <p>hosted @ https://github.com/ericmalekos/RNASeq-walkthough</p>
 <h1 id="rna-seq-walkthrough">RNA Seq Walkthrough</h1>
 <h2 id="introduction">Introduction</h2>
@@ -243,7 +243,7 @@ What about adapter removal? The author of <em>STAR</em> suggests it could be use
     # use Ctrl + c to exit top</code></pre>
 <p>You’ll see something like:</p>
 <p><img src="./Images/1_top.png" /></p>
-<p>I’ve cropped the image so that it only shows one running process - my <em>BWA</em> run - but you’ll see all of the current processes. The most important thing to note for the thread discussion is the <strong>%Cpu(s)</strong> number. Here it’s at <strong>25.5%</strong> which means <em>~ 64 </em> 0.25 = 16* threads are in use, and 48 are available (also, under my <em>BWA</em> instance the <strong>%CPU</strong> is <strong>1197%</strong>, where 100% is equivalent to a single thread, so I must have run this with 12 threads). The main thing is to be considerate when choosing threads and <strong>NOT</strong> contribute to a situation where <em>%Cpu(s) becomes &gt;= 100%</em>. This would add significant overhead as the server switches among processes and slow everyone’s computation down.</p>
+<p>I’ve cropped the image so that it only shows one running process - my <em>BWA</em> run - but you’ll see all of the current processes. The most important thing to note for the thread discussion is the <strong>%Cpu(s)</strong> number. Here it’s at <strong>25.5%</strong> which means <em>~ 64 * 0.25 = 16</em> threads are in use, and 48 are available (also, under my <em>BWA</em> instance the <strong>%CPU</strong> is <strong>1197%</strong>, where 100% is equivalent to a single thread, so I must have run this with 12 threads). The main thing is to be considerate when choosing threads and <strong>NOT</strong> contribute to a situation where <em>%Cpu(s) becomes &gt;= 100%</em>. This would add significant overhead as the server switches among processes and slow everyone’s computation down.</p>
 <h3 id="qc-again">1.5 QC Again</h3>
 <p>Here we repeat Parts 1.1 &amp; 1.2, updating the path to point to the new QC files.</p>
 <pre><code>    $ mkdir quality_trimmed
@@ -273,7 +273,10 @@ What about adapter removal? The author of <em>STAR</em> suggests it could be use
 - requires an annotated transcriptome<br />
 - less compatible with many downstream tools - in particular those that require BAM/SAMs</p>
 <h3 id="part-2.2-star-alignment-and-counting">Part 2.2 STAR Alignment and Counting</h3>
-<p>STAR is a fast but memory hungry aligner (recommends at least 32 GBs for human genome) with a built in gene counting function yeilding the same results as <em>htseq</em> but saving a step by counting as it maps. It seems to be among the most popular transcript aligning tools. <a href="https://github.com/alexdobin/STAR">More on <em>STAR</em></a>. Before mapping we need to build a genome index. We need: 1. <em>STAR</em> 2. Annotation files (GTF or GFF) 3. Genome</p>
+<p><em>STAR</em> is a fast but memory hungry aligner (recommends at least 32 GBs for human genome) with a built in gene counting function yeilding the same results as <em>htseq-count</em> (default settings) but saving a step by counting as it maps. It seems to be among the most popular transcript aligning tools. <a href="https://github.com/alexdobin/STAR">More on <em>STAR</em></a>. Before mapping we need to build a genome index. We need:<br />
+1. <em>STAR</em><br />
+2. Annotation files (GTF or GFF)<br />
+3. Genome</p>
 <p>My data is from mouse, the files can be found <a href="https://www.gencodegenes.org/mouse/release_M25.html">here</a>. Note that the STAR documentation recommends using the <em>primary_assembly</em> (PRI) files.</p>
 <pre><code>    # Make new directory and get STAR
     mkdir STAR
@@ -289,7 +292,7 @@ What about adapter removal? The author of <em>STAR</em> suggests it could be use
 
     # Annotation and Genome
     wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/gencode.vM25.primary_assembly.annotation.gtf.gz
-    
+
     wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/GRCm38.primary_assembly.genome.fa.gz
 
     # Files need to be unzipped
@@ -303,7 +306,7 @@ What about adapter removal? The author of <em>STAR</em> suggests it could be use
             --genomeDir ./M25_index \
             --genomeFastaFiles ./GRCm38.primary_assembly.genome.fa \
             --sjdbGTFfile ./gencode.vM25.primary_assembly.annotation.gtf \
-            --sjdbOverhang 150 \</code></pre>
+            --sjdbOverhang 150</code></pre>
 <p>The arguments in this step are pretty straightforward. You might change <code>–sjdbOverhang</code> based on your read lengths. The optimum choice is <em>length of longest read - 1</em> Now we perform the alignment and gene counting in <em>STAR</em>.<br />
 <strong>NOTE</strong>: The script provided will cycle through all of the pair end reads in the <code>readDir</code>. Currently it loads and unloads the genome into memory for every iteration of the loop which is inneficient. There is a way to load the genome once before entering the loop and unload it after but I was having trouble getting it to work.</p>
 <pre><code>    # First make some output directories
@@ -396,7 +399,11 @@ What about adapter removal? The author of <em>STAR</em> suggests it could be use
 
     salmon/bin/salmon index -t gentrome.fa.gz -d decoys.txt -p 12 -i salmon_index --gencode</code></pre>
 <p>Arguments:<br />
-- <code>t</code>: transcriptome and genome concatenated file with which to build index. - <code>d</code>: decoy file used to avoid spurious mappings. I don’t understand this very well, there’s a discussion of why this is important <a href="https://www.biostars.org/p/335414/">here</a>. - <code>p</code>: number of threads - <code>i</code>: name of the generated index - <code>gencode</code>: tell <em>Salmon</em> the input is in Gencode format.</p>
+- <code>t</code>: transcriptome and genome concatenated file with which to build index<br />
+- <code>d</code>: decoy file used to avoid spurious mappings. I don’t understand this very well, there’s a discussion of why this is important <a href="https://www.biostars.org/p/335414/">here</a><br />
+- <code>p</code>: number of threads<br />
+- <code>i</code>: name of the generated index<br />
+- <code>gencode</code>: tell <em>Salmon</em> the input is in Gencode format</p>
 <p>For more options and explanations use <code>salmon/bin/salmon index –help</code></p>
 <p>You may see a bunch of warning messages. Check the dialogue <a href="https://github.com/COMBINE-lab/salmon/issues/214">here</a> for an explanation. You may want to set the <code>–keepDuplicates</code> flag.</p>
 <p>Now we are ready to quantify our reads.</p>
